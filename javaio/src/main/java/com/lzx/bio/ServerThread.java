@@ -42,7 +42,7 @@ public class ServerThread implements Runnable {
             try {
                 printWriter = new PrintWriter(client.getOutputStream(),true);
                 System.out.println("向客户端发送消息："+msg);
-                printWriter.write(msg);
+                printWriter.println(msg);
                 //printWriter.flush();
             }catch (Exception e){
                 e.printStackTrace();
@@ -52,13 +52,13 @@ public class ServerThread implements Runnable {
     }
 
     public void  receive(){
-        System.out.println("服务器接受到消息");
         try {
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()) );
-            System.out.println("msg"+msg);
-            while ((msg=bufferedReader.readLine())!=null){
-                System.out.println("服务器收到消息"+msg);
-                send();
+            while (true){
+                if((msg=bufferedReader.readLine())!=null){
+                    System.out.println("服务器收到消息"+msg);
+                    send();
+
+                }
             }
         }catch (Exception e){
             e.printStackTrace();;
