@@ -7,45 +7,48 @@
 package com.lzx.nio;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingDeque;
 
 public class ServerThread implements Runnable {
-    private Socket socket;
-    private BlockingDeque<Socket> clients;
+    private SocketChannel client;
+    private BlockingDeque<SocketChannel> clients;
     private String msg;
-    private PrintWriter printWriter;
-    private BufferedReader bufferedReader;
     public ServerThread(){};
-    public ServerThread(Socket socket,BlockingDeque<Socket> clients){
-        this.socket=socket;
+    public ServerThread(SocketChannel client,BlockingDeque<SocketChannel> clients){
+        this.client=client;
         this.clients=clients;
     }
     @Override
     public void run() {
-        System.out.println("线程开始启动");
-        msg = "欢迎【" + socket.getInetAddress() + "】进入聊天室！当前聊天室有【"
-                + clients.size() + "】人";
+        System.out.println("thread is start");
         try {
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()) );
-        }catch (Exception e){
+            msg = "welcome 【" + client.getRemoteAddress()+ "】talkedRoom！【"
+                    + clients.size() + "】people in room";
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        send();
-        receive();
+        send();//每个客户端进来发送一次消息
+        receive();//由于channel是非阻塞的所以循环等待接受消息
     }
 
     public  void  send(){
-        clients.forEach((client)->{
+        clients.forEach((ct)->{
+            ByteBuffer byteBuffer=ByteBuffer.allocate(42);
             try {
-                printWriter = new PrintWriter(client.getOutputStream(),true);
-                System.out.println("向客户端发送消息："+msg);
-                printWriter.println(msg);
-                //printWriter.flush();
+                int count = ct.read(byteBuffer);
+                while (count!=-1){
+                    System.out.print("recive clinet's message:"+(char)byteBuffer.get());//recvie a byte at the time
+                }
             }catch (Exception e){
                 e.printStackTrace();
+            }finally {
+                byteBuffer.clear();
             }
 
         });
@@ -54,8 +57,8 @@ public class ServerThread implements Runnable {
     public void  receive(){
         try {
             while (true){
-                if((msg=bufferedReader.readLine())!=null){
-                    System.out.println("服务器收到消息"+msg);
+                if(1==1){
+                    System.out.println("server accept:"+msg);
                     send();
 
                 }
