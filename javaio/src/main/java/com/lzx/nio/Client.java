@@ -42,22 +42,18 @@ public class Client {
         socketChannel.connect(new InetSocketAddress(adress,port));
         System.out.println("start connect to server");
         socketChannel.configureBlocking(false);
-        ByteBuffer byteBuffer =ByteBuffer.allocate(42);
-        byteBuffer.put("aaaaa".getBytes());
-        socketChannel.register(selector, SelectionKey.OP_WRITE);
-        byteBuffer.flip();
-        socketChannel.write(byteBuffer);
-        byteBuffer.clear();
-        System.in.read();
+        socketChannel.register(selector, SelectionKey.OP_READ);
+        new Thread(new ClientThread(selector)).start();
+        for (;;){
+            Scanner scanner = new Scanner(System.in);
+            String msg = scanner.nextLine();
+            ByteBuffer bb = ByteBuffer.allocate(1024);
+            bb.put(msg.getBytes());
+            bb.flip();
+            socketChannel.write(bb);
+        }
     }
-    public void send(String msg) throws IOException {
 
-
-    }
-
-    private void receive() throws IOException {
-
-    }
 
     public static void main(String[] args) throws IOException {
         Client client = new Client();

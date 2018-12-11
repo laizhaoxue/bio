@@ -6,8 +6,9 @@
  **/
 package com.lzx.nio;
 
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+
+
+import com.lzx.nio.model.UserInfo;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,53 +22,72 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 
 
-@NoArgsConstructor
 public class Server {
-   @Setter
     private static  int DEFAULT_PORT=7777;
-    //shared Obj,may ++ or --,the same as Set + volatile
-    private static BlockingDeque<SocketChannel> clients = new LinkedBlockingDeque<>();
     private static ServerSocketChannel serverSocketChannel ;
-    private static ExecutorService pool = Executors.newFixedThreadPool(4);
     private Charset charset = Charset.forName("utf-8");
     private CharsetDecoder charsetDecoder = charset.newDecoder();
-    public void start () throws IOException {
-        if(serverSocketChannel!=null) return;
-        Selector selector = Selector.open();
-        serverSocketChannel=ServerSocketChannel.open();
-        serverSocketChannel.socket().bind(new InetSocketAddress(9090));
-        serverSocketChannel.configureBlocking(false);
-        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-        while (selector.select()>0){
+    private Selector selector;
+    public void start ()   {
+        try {
+            if(serverSocketChannel!=null) return;
+            Selector selector = Selector.open();
+            serverSocketChannel=ServerSocketChannel.open();
+            serverSocketChannel.socket().bind(new InetSocketAddress(9090));
+            serverSocketChannel.configureBlocking(false);
+            serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+            watching();
+        }catch (IOException e){
+            e.printStackTrace();
+        }finally {
+            try {
+                selector.close();
+                serverSocketChannel.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
+    }
+    private void watching() throws IOException {
+        int selectLine = selector.select();
+        while (selectLine>0){
             Set set = selector.selectedKeys();
             Iterator<SelectionKey> iterable =set.iterator() ;
             while(iterable.hasNext()){
-               SelectionKey selectionKey = iterable.next();
+                SelectionKey selectionKey = iterable.next();
                 if(selectionKey.isReadable()){
                     SocketChannel sc=(SocketChannel) selectionKey.channel();
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(41);
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+                    UserInfo userInfo = (UserInfo) selectionKey.attachment();
                     if(sc.read(byteBuffer)>0){
                         byteBuffer.flip();
                         CharBuffer cb = charsetDecoder.decode(byteBuffer);
-                        System.out.println(cb.toString());
+                        String message = cb.toString();
+                        if(userInfo!=null&&userInfo.isInit()){
+                            //sendmessage(userInfo.getName(),message);
+                            ByteBuffer bb = ByteBuffer.allocate(1024);
+                            bb.put((userInfo.getName()+" say:"+message).getBytes());
+                            sc.write(bb);
+                        }else{
+                            //get  client first input and  init user's name
+                            UserInfo user = new UserInfo();
+                            user.setName(message);
+                            user.setInit(true);
+                            selectionKey.attach(userInfo);
+                            ByteBuffer bb = ByteBuffer.allocate(1024);
+                            bb.put(("hello!"+user.getName()+"you can chat").getBytes());
+                            sc.write(bb);
+                        }
                     }
                 }
-                if (selectionKey.isWritable()){
-                    System.out.println("write is arrived");
-                }
                 if (selectionKey.isAcceptable()){
-                    System.out.println("accept is arrived "+set.size());
                     SocketChannel sc =  ((ServerSocketChannel)selectionKey.channel()).accept();
                     sc.configureBlocking(false);
                     sc.register(selector,SelectionKey.OP_READ);
-
+                    sc.write(charset.encode("wellcom chat room，please input your name!"));
                 }
                 iterable.remove();
             }
@@ -76,10 +96,9 @@ public class Server {
         }
     }
 
-    public int size(){
-        return clients.size();
-    }
+     private void sendmessage(String userName,String msg){
 
+     }
     public static void main(String[] args) throws IOException {
         Server server = new Server();
         server.start();
