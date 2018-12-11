@@ -12,11 +12,13 @@ import lombok.Setter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
@@ -34,7 +36,7 @@ public class Server {
     private static ServerSocketChannel serverSocketChannel ;
     private static ExecutorService pool = Executors.newFixedThreadPool(4);
     private Charset charset = Charset.forName("utf-8");
-
+    private CharsetDecoder charsetDecoder = charset.newDecoder();
     public void start () throws IOException {
         if(serverSocketChannel!=null) return;
         Selector selector = Selector.open();
@@ -50,12 +52,12 @@ public class Server {
                SelectionKey selectionKey = iterable.next();
                 if(selectionKey.isReadable()){
                     SocketChannel sc=(SocketChannel) selectionKey.channel();
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(1);
-
-                   while (sc.read(byteBuffer)>0){
-                       byteBuffer.flip();
-                       System.out.print((char)byteBuffer.get());
-                   };
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(41);
+                    if(sc.read(byteBuffer)>0){
+                        byteBuffer.flip();
+                        CharBuffer cb = charsetDecoder.decode(byteBuffer);
+                        System.out.println(cb.toString());
+                    }
                 }
                 if (selectionKey.isWritable()){
                     System.out.println("write is arrived");
