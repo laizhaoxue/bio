@@ -15,6 +15,8 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Scanner;
 
@@ -36,15 +38,18 @@ public class Client {
 
     public void connect() throws IOException {
         System.out.println("start connect to server");
+        Selector selector = Selector.open();
         socketChannel= SocketChannel.open();
         socketChannel.connect(new InetSocketAddress(adress,port));
+        socketChannel.configureBlocking(false);
         //new Thread(new ClientThread(bufferedReader)).start();
         ByteBuffer byteBuffer =ByteBuffer.allocate(42);
         byteBuffer.put("aaaaa".getBytes());
-
+        socketChannel.register(selector, SelectionKey.OP_WRITE);
         byteBuffer.flip();
         socketChannel.write(byteBuffer);
         byteBuffer.clear();
+        System.in.read();
     }
     public void send(String msg) throws IOException {
 

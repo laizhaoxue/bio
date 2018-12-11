@@ -34,7 +34,7 @@ public class ServerThread implements Runnable {
             e.printStackTrace();
         }
         send();//每个客户端进来发送一次消息
-        receive();//由于channel是非阻塞的所以循环等待接受消息
+       // receive();//由于channel是非阻塞的所以循环等待接受消息
     }
 
     public  void  send(){

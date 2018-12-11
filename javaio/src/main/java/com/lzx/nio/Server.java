@@ -11,11 +11,14 @@ import lombok.Setter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,15 +37,39 @@ public class Server {
 
     public void start () throws IOException {
         if(serverSocketChannel!=null) return;
+        Selector selector = Selector.open();
+        serverSocketChannel=ServerSocketChannel.open();
         serverSocketChannel.socket().bind(new InetSocketAddress(9090));
         serverSocketChannel.configureBlocking(false);
-        for(;;){
-            SocketChannel client = serverSocketChannel.accept();
-            if(client!=null){
-                System.out.println("recive"+client.getRemoteAddress()+"连接connect");
-                clients.add(client);
-                pool.submit(new ServerThread(client,clients));
+        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        while (selector.select()>0){
+
+            Set set = selector.selectedKeys();
+            Iterator<SelectionKey> iterable =set.iterator() ;
+            while(iterable.hasNext()){
+               SelectionKey selectionKey = iterable.next();
+                if(selectionKey.isReadable()){
+                    SocketChannel sc=(SocketChannel) selectionKey.channel();
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(1);
+
+                   while (sc.read(byteBuffer)>0){
+                       byteBuffer.flip();
+                       System.out.print((char)byteBuffer.get());
+                   };
+                }
+                if (selectionKey.isWritable()){
+                    System.out.println("write is arrived");
+                }
+                if (selectionKey.isAcceptable()){
+                    System.out.println("accept is arrived "+set.size());
+                    SocketChannel sc =  ((ServerSocketChannel)selectionKey.channel()).accept();
+                    sc.configureBlocking(false);
+                    sc.register(selector,SelectionKey.OP_READ);
+
+                }
+                iterable.remove();
             }
+
 
         }
     }
