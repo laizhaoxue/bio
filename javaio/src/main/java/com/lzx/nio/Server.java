@@ -33,7 +33,7 @@ public class Server {
     public void start ()   {
         try {
             if(serverSocketChannel!=null) return;
-            Selector selector = Selector.open();
+            selector = Selector.open();
             serverSocketChannel=ServerSocketChannel.open();
             serverSocketChannel.socket().bind(new InetSocketAddress(9090));
             serverSocketChannel.configureBlocking(false);
@@ -52,15 +52,18 @@ public class Server {
 
     }
     private void watching() throws IOException {
-        int selectLine = selector.select();
-        while (selectLine>0){
+        while (true){
+            int selectLine = selector.select();
             Set set = selector.selectedKeys();
             Iterator<SelectionKey> iterable =set.iterator() ;
+            if(selectLine==0){
+                continue;
+            }
             while(iterable.hasNext()){
                 SelectionKey selectionKey = iterable.next();
                 if(selectionKey.isReadable()){
                     SocketChannel sc=(SocketChannel) selectionKey.channel();
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(42);
                     UserInfo userInfo = (UserInfo) selectionKey.attachment();
                     if(sc.read(byteBuffer)>0){
                         byteBuffer.flip();
@@ -68,18 +71,19 @@ public class Server {
                         String message = cb.toString();
                         if(userInfo!=null&&userInfo.isInit()){
                             //sendmessage(userInfo.getName(),message);
-                            ByteBuffer bb = ByteBuffer.allocate(1024);
+                            ByteBuffer bb = ByteBuffer.allocate(42);
                             bb.put((userInfo.getName()+" say:"+message).getBytes());
+                            bb.flip();
                             sc.write(bb);
                         }else{
                             //get  client first input and  init user's name
                             UserInfo user = new UserInfo();
                             user.setName(message);
                             user.setInit(true);
-                            selectionKey.attach(userInfo);
-                            ByteBuffer bb = ByteBuffer.allocate(1024);
-                            bb.put(("hello!"+user.getName()+"you can chat").getBytes());
-                            sc.write(bb);
+                            selectionKey.attach(user);
+                            //ByteBuffer bb = ByteBuffer.allocate(42);
+                            //bb.put(("hello!"+user.getName()+"you can chat").getBytes());
+                            sc.write(charset.encode("hello! "+user.getName()+" you can chat"));
                         }
                     }
                 }
@@ -102,5 +106,6 @@ public class Server {
     public static void main(String[] args) throws IOException {
         Server server = new Server();
         server.start();
+        //System.out.println("hello! you can chat".getBytes().length);
     }
 }

@@ -34,6 +34,7 @@ public class ClientThread implements Runnable{
               if(selectorLine==0){
                   continue;
               }
+
                Set<SelectionKey> keys= selector.selectedKeys();
                Iterator<SelectionKey> iterator = keys.iterator();
                while (iterator.hasNext()){
@@ -41,7 +42,7 @@ public class ClientThread implements Runnable{
                    if(selectionKey.isReadable()){
                       SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
                        ByteBuffer bb = ByteBuffer.allocate(1024);
-                       if (socketChannel.write(bb)>0){
+                       if (socketChannel.read(bb)>0){
                            bb.flip();
                            System.out.println(charsetDecoder.decode(bb).toString());
                            bb.clear();

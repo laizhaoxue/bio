@@ -21,28 +21,26 @@ import java.nio.channels.SocketChannel;
 import java.util.Scanner;
 
 public class Client {
-    @Setter
-    private static String adress="127.0.0.1";
-    @Setter
+    private static String impress ="127.0.0.1";
     private static int port=9090;
     private SocketChannel socketChannel;
-    private static String msg;
+    private Selector selector;
 
     public Client(){
 
     }
-    public Client(String adress,int port){
-        this.adress=adress;
+    public Client(String impress,int port){
+        this.impress=impress;
         this.port=port;
     }
 
     public void connect() throws IOException {
-        Selector selector = Selector.open();
+        selector = Selector.open();
         socketChannel= SocketChannel.open();
-        socketChannel.connect(new InetSocketAddress(adress,port));
-        System.out.println("start connect to server");
+        socketChannel.connect(new InetSocketAddress(impress,port));
         socketChannel.configureBlocking(false);
         socketChannel.register(selector, SelectionKey.OP_READ);
+
         new Thread(new ClientThread(selector)).start();
         for (;;){
             Scanner scanner = new Scanner(System.in);
