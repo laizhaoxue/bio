@@ -18,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.Scanner;
 
 public class Client {
@@ -25,6 +26,7 @@ public class Client {
     private static int port=9090;
     private SocketChannel socketChannel;
     private Selector selector;
+    private Charset charset = Charset.forName("utf-8");
 
     public Client(){
 
@@ -45,10 +47,7 @@ public class Client {
         for (;;){
             Scanner scanner = new Scanner(System.in);
             String msg = scanner.nextLine();
-            ByteBuffer bb = ByteBuffer.allocate(1024);
-            bb.put(msg.getBytes());
-            bb.flip();
-            socketChannel.write(bb);
+            socketChannel.write(charset.encode(msg));
         }
     }
 

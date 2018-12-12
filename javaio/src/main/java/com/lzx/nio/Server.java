@@ -14,10 +14,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.Iterator;
@@ -53,7 +50,7 @@ public class Server {
     }
     private void watching() throws IOException {
         while (true){
-            int selectLine = selector.select();
+            int selectLine = selector.select();//waitting for client
             Set set = selector.selectedKeys();
             Iterator<SelectionKey> iterable =set.iterator() ;
             if(selectLine==0){
@@ -69,20 +66,14 @@ public class Server {
                         byteBuffer.flip();
                         CharBuffer cb = charsetDecoder.decode(byteBuffer);
                         String message = cb.toString();
-                        if(userInfo!=null&&userInfo.isInit()){
-                            //sendmessage(userInfo.getName(),message);
-                            ByteBuffer bb = ByteBuffer.allocate(42);
-                            bb.put((userInfo.getName()+" say:"+message).getBytes());
-                            bb.flip();
-                            sc.write(bb);
+                        if(userInfo!=null&&userInfo.isInit()){//client is readyed for chat
+                            broadcast(userInfo.getName(),message,selector);//notice  to all clinets
                         }else{
                             //get  client first input and  init user's name
                             UserInfo user = new UserInfo();
                             user.setName(message);
                             user.setInit(true);
                             selectionKey.attach(user);
-                            //ByteBuffer bb = ByteBuffer.allocate(42);
-                            //bb.put(("hello!"+user.getName()+"you can chat").getBytes());
                             sc.write(charset.encode("hello! "+user.getName()+" you can chat"));
                         }
                     }
@@ -100,12 +91,19 @@ public class Server {
         }
     }
 
-     private void sendmessage(String userName,String msg){
-
+     private void broadcast(String userName,String msg,final Selector selector) throws IOException {
+            Set<SelectionKey> keys = selector.keys();
+            Iterator<SelectionKey> iterator = keys.iterator();
+            while (iterator.hasNext()){
+                SelectionKey selectionKey = iterator.next();
+                Channel channel = selectionKey.channel();
+                if(channel instanceof SocketChannel){
+                    ((SocketChannel) channel).write(charset.encode(userName+" say:"+msg));
+                }
+            }
      }
     public static void main(String[] args) throws IOException {
         Server server = new Server();
         server.start();
-        //System.out.println("hello! you can chat".getBytes().length);
     }
 }
